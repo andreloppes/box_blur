@@ -48,7 +48,7 @@ static const unsigned BUFFER_SIZE = 1000;
 string buffer[BUFFER_SIZE];
 static unsigned counter = 0;
 unsigned in = 0, out = 0;
-
+bool flag = false;
 void add_buffer(string str)
 {
   buffer[in] = str;
@@ -184,7 +184,9 @@ void consumer_func(const unsigned id)
 			// Lembre-se que a função wait() invoca m.unlock() antes de colocar a thread em estado de espera para que o produtor consiga adquirir a posse do mutex m e produzir dados
 			// Quando a thread é acordada, a função wait() invoca m.lock() retomando a posse do mutex m
 		}
-        
+
+
+
 		// O buffer não está mais vazio, então consome um elemento
 		string i = get_buffer();
 		
@@ -197,15 +199,19 @@ void consumer_func(const unsigned id)
         }
         string output_image_path = i.replace(i.find(INPUT_DIRECTORY), INPUT_DIRECTORY.length(), OUTPUT_DIRECTORY);
         write_image(output_image_path, output_image);
-std::cout << "Consumer " << id << " - Buffer counter: " << counter << std::endl;
+        std::cout << "Consumer " << id << " - Buffer counter: " << counter << std::endl;
 		space_available.notify_one();
-		
 
+        if(counter == 0){
+            exit(0);
+        }
 		// Verifica a integridade do buffer, ou seja, verifica se o número de elementos do buffer (counter)
 		// é maior ou igual a zero
 		assert(counter >= 0);
 	}  // Fim de escopo -> o objeto lock será destruído e invocará m.unlock(), liberando o mutex m
 }
+
+
 
 int main(int argc, char *argv[])
 {
@@ -264,17 +270,21 @@ int main(int argc, char *argv[])
 		assert(counter <= BUFFER_SIZE);		
     }
     int NUM_CONSUMERS = INPUT_DIRECTORY.length();
-    //consumers
+
     for (unsigned i =0; i < NUM_CONSUMERS; ++i)
 	{
 		consumers.push_back(std::thread(consumer_func, i));
+ 
 	}
 
-	consumers[0].join();
+for (int i=0; i< consumers.size(); ++i)
+	{
+		consumers[i].join();
+	}
 
     auto end_time = chrono::high_resolution_clock::now();
     auto elapsed_time = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
     cout << "Elapsed time: " << elapsed_time.count() << " ms" << endl;
-    
+
     return 0;
 }
